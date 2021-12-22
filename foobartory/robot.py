@@ -1,4 +1,4 @@
-from time import sleep
+import asyncio
 from typing import TYPE_CHECKING
 from random import random, uniform
 
@@ -20,40 +20,46 @@ class Robot:
         return str(self.robot_id)
 
 
-    def work(self):
+    async def work(self):
         """Choose next activity for robot"""
-        if self.factory.foos_count >= ROBOT_COST_FOOS and self.factory.cash >= ROBOT_COST_EUROS:
-            self.buy_robot()
-        elif self.factory.foobars_count >= FOOBAR_SELL_MAX:
-            self.sell_foobars()
-        elif self.factory.foos_count > ROBOT_COST_FOOS and self.factory.bars_count >= 1:
-            self.assemble_foobars()
-        elif self.factory.foos_count < self.factory.bars_count:
-            self.mine_foo()
-        else:
-            self.mine_bar()
-            
+        while len(self.factory.robots) < ROBOT_MAX:
+            if self.factory.foos_count >= ROBOT_COST_FOOS and self.factory.cash >= ROBOT_COST_EUROS and not self.factory.buy_lock.locked():
+                async with self.factory.buy_lock:
+                    await self.buy_robot()
+            elif self.factory.foobars_count >= FOOBAR_SELL_MAX and not self.factory.sell_lock.locked():
+                async with self.factory.sell_lock:
+                    await self.sell_foobars()
+            elif self.factory.foos_count >= ROBOT_COST_FOOS and self.factory.bars_count >= 1 and not self.factory.assemble_lock.locked():
+                async with self.factory.assemble_lock:
+                    await self.assemble_foobars()
+            elif self.factory.bars_count < FOOBAR_SELL_MAX:
+                await self.mine_bar()
+            elif self.factory.foos_count < ROBOT_COST_FOOS:
+                await self.mine_foo()
 
-    def wait(self, duration):
-        sleep(duration * DURATION_MODIFIER)
+            await asyncio.sleep(0.01)
+                    
+
+    async def wait(self, duration):
+        await asyncio.sleep(duration * DURATION_MODIFIER)
 
 
     @change_activity
-    def mine_foo(self):
-        self.wait(duration=FOO_MINING_TIME)
+    async def mine_foo(self):
+        await self.wait(duration=FOO_MINING_TIME)
         self.factory.foos_count += 1
 
 
     @change_activity
-    def mine_bar(self):
+    async def mine_bar(self):
         duration = uniform(BAR_MINING_TIME_MIN, BAR_MINING_TIME_MAX)
-        self.wait(duration=duration)
+        await self.wait(duration=duration)
         self.factory.bars_count += 1
 
     
     @change_activity
-    def assemble_foobars(self):
-        self.wait(duration=FOOBAR_ASSEMBLY_TIME)
+    async def assemble_foobars(self):
+        await self.wait(duration=FOOBAR_ASSEMBLY_TIME)
         self.factory.foos_count -= 1
 
         success = random() < FOOBAR_ASSEMBLY_SUCCESS_RATE
@@ -63,14 +69,15 @@ class Robot:
 
     
     @change_activity
-    def sell_foobars(self):
-        self.wait(duration=FOOBAR_SELL_TIME)
+    async def sell_foobars(self):
+        await self.wait(duration=FOOBAR_SELL_TIME)
         self.factory.foobars_count -= FOOBAR_SELL_MAX
         self.factory.cash += FOOBAR_SELL_MAX * FOOBAR_SELL_PRICE
 
     
     @change_activity
-    def buy_robot(self):
+    async def buy_robot(self):
+        """Buy new robot and start new asynchronous thread"""
         self.factory.cash -= ROBOT_COST_EUROS
         self.factory.foos_count -= ROBOT_COST_FOOS
         
@@ -78,3 +85,6 @@ class Robot:
         robot = Robot(robot_id=robot_id, factory=self.factory)
         self.factory.robots.append(robot)
         print(f"🏗  Made {len(self.factory.robots)} robots (made by robot #{self.robot_id})")
+
+        if len(self.factory.robots) < ROBOT_MAX:
+            self.factory.tasks.append(asyncio.create_task(robot.work()))

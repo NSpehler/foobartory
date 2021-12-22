@@ -1,6 +1,6 @@
 # Foobartory
 
-Building an automated `foobar` factory in Python for a coding challenge.
+Building an automated `foobar` factory in Python for a coding challenge. It uses `asyncio` for multiprocessing.
 
 ## Docs
 
@@ -25,7 +25,6 @@ Note that duration shown in the logs has been adjusted for actual speed, regardl
 ## Improvement ideas
 
 - Add unit tests
-- Add multiprocessing using `asyncio`
 - Improve the logic for robots to choose their next task
 - Specialize the robots to avoid losing time when switching activities
 

@@ -1,3 +1,4 @@
+import asyncio
 from time import perf_counter, gmtime, strftime
 
 from foobartory.robot import Robot
@@ -5,7 +6,7 @@ from foobartory.factory import Factory
 from foobartory.config import DURATION_MODIFIER, ROBOT_MIN, ROBOT_MAX
 
 
-def start():
+async def start():
     factory = Factory()
     start = perf_counter()
     
@@ -15,10 +16,9 @@ def start():
         factory.robots.append(robot)
 
     print(f"🏗  Making new robots")
-    while len(factory.robots) < ROBOT_MAX:
-        for robot in factory.robots:
-            robot.work()
+    await factory.start()
 
+    factory.stop()
     end = perf_counter()
     duration = get_duration(start=start, end=end)
 
@@ -36,4 +36,4 @@ def get_duration(start, end):
 
 
 if __name__ == "__main__":
-    start()
+    asyncio.run(start())
