@@ -23,13 +23,24 @@ class Robot:
     async def work(self):
         """Choose next activity for robot"""
         while len(self.factory.robots) < ROBOT_MAX:
-            if self.factory.foos_count >= ROBOT_COST_FOOS and self.factory.cash >= ROBOT_COST_EUROS and not self.factory.buy_lock.locked():
+            if (
+                self.factory.foos_count >= ROBOT_COST_FOOS
+                and self.factory.cash >= ROBOT_COST_EUROS
+                and not self.factory.buy_lock.locked()
+            ):
                 async with self.factory.buy_lock:
                     await self.buy_robot()
-            elif self.factory.foobars_count >= FOOBAR_SELL_MAX and not self.factory.sell_lock.locked():
+            elif (
+                self.factory.foobars_count >= FOOBAR_SELL_MAX
+                and not self.factory.sell_lock.locked()
+            ):
                 async with self.factory.sell_lock:
                     await self.sell_foobars()
-            elif self.factory.foos_count >= ROBOT_COST_FOOS and self.factory.bars_count >= 1 and not self.factory.assemble_lock.locked():
+            elif (
+                self.factory.foos_count >= ROBOT_COST_FOOS
+                and self.factory.bars_count >= 1 
+                and not self.factory.assemble_lock.locked()
+            ):
                 async with self.factory.assemble_lock:
                     await self.assemble_foobars()
             elif self.factory.bars_count < FOOBAR_SELL_MAX:
